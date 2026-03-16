@@ -1,0 +1,714 @@
+# Nursing LLM Demo — Complete Repository Analysis Report
+
+---
+
+## 1. PROJECT SUMMARY
+
+| Field | Detail |
+|---|---|
+| **Project Name** | `nursing-rag-frontend` |
+| **Type** | Single-Page Web Application (SPA) — Frontend only |
+| **Purpose** | A ChatGPT-style AI learning assistant UI for Nursing and Pharmacy students, supporting a Retrieval-Augmented Generation (RAG) backend |
+| **Current State** | **Demo/Prototype** — authentication is mocked (no real API calls), AI responses are simulated with `setTimeout`, no backend integration exists yet |
+| **Primary Language** | JavaScript (JSX) |
+| **Version** | 0.0.0 (pre-release) |
+
+The application presents a polished, two-panel SaaS-style interface. Users can log in or sign up (mock only), then access a workspace with a sidebar for projects/chat history, a dashboard home, and an AI chat screen.
+
+---
+
+## 2. TECHNOLOGY STACK
+
+| Category | Technology | Version |
+|---|---|---|
+| **Framework** | React | ^18.2.0 |
+| **Build Tool** | Vite | ^5.2.0 |
+| **Routing** | React Router DOM | ^6.22.3 |
+| **Styling** | TailwindCSS | ^3.4.1 |
+| **CSS Processing** | PostCSS + Autoprefixer | ^8.4.38 / ^10.4.19 |
+| **Icon Library** | Lucide React | ^0.344.0 |
+| **CSS Utility** | clsx + tailwind-merge | ^2.1.0 / ^2.2.1 |
+| **Font** | Inter (Google Fonts CDN) | — |
+| **Linting** | ESLint + React plugins | ^8.57.0 |
+| **Type Hints** | @types/react, @types/react-dom | Dev only |
+
+**No backend, no state management library (Redux/Zustand), no data-fetching library (SWR/React Query), no real auth system.**
+
+---
+
+## 3. DIRECTORY STRUCTURE
+
+```
+Nursing_LLM/
+└── Nursing_llm_demo/                  ← Project root
+    ├── index.html                     ← HTML entry point (SPA shell)
+    ├── package.json                   ← Dependencies & npm scripts
+    ├── vite.config.js                 ← Vite bundler config (React plugin)
+    ├── tailwind.config.js             ← TailwindCSS theme tokens
+    ├── postcss.config.js              ← PostCSS pipe (Tailwind + Autoprefixer)
+    ├── .gitignore                     ← Ignores node_modules, dist
+    ├── home page.png                  ← Screenshot asset (documentation)
+    ├── mid page.png                   ← Screenshot asset (documentation)
+    ├── sigin_in an sign_up_login.png  ← Screenshot asset (documentation)
+    ├── dist/                          ← Built production bundle (generated)
+    │   ├── index.html
+    │   └── assets/                   ← Compiled JS + CSS chunks
+    └── src/                          ← All source code
+        ├── main.jsx                  ← React DOM bootstrap (entry)
+        ├── App.jsx                   ← Root router + route definitions
+        ├── index.css                 ← Global Tailwind directives + body base
+        ├── utils/
+        │   └── cn.js                 ← className merge utility
+        ├── pages/
+        │   ├── Login.jsx             ← Login page component
+        │   ├── Login.css             ← Login page custom styles
+        │   ├── Signup.jsx            ← Signup page component
+        │   ├── Signup.css            ← Signup page custom styles
+        │   └── Workspace.jsx         ← Main app shell (post-login)
+        └── components/
+            ├── layout/
+            │   ├── Sidebar.jsx       ← Left nav: projects, chat history
+            │   └── TopBar.jsx        ← Top header: search, user, notifications
+            ├── chat/
+            │   ├── ChatArea.jsx      ← Full chat view with message history
+            │   ├── ChatInput.jsx     ← Multi-line textarea + send button
+            │   ├── MessageBubble.jsx ← Individual chat message renderer
+            │   └── SuggestedPrompts.jsx ← Quick-start prompt cards
+            └── dashboard/
+                ├── DashboardArea.jsx ← Home dashboard (projects, concepts, tags)
+                └── DashboardArea.css ← Dashboard-specific styles
+```
+
+**Folder responsibilities:**
+- `pages/` — Route-level components (full screens)
+- `components/layout/` — Persistent chrome visible across the workspace
+- `components/chat/` — All chat-related UI units
+- `components/dashboard/` — Dashboard home UI
+- `utils/` — Shared non-UI helpers
+- `dist/` — Auto-generated build output, not tracked logic
+
+---
+
+## 4. FILE-BY-FILE ANALYSIS
+
+---
+
+### FILE: `index.html`
+
+**Purpose:** The single HTML shell for the entire SPA. Vite injects the bundled JS here.
+
+**Key Components:**
+- `<div id="root">` — React mount point
+- Google Fonts `<link>` for Inter (400, 500, 600, 700)
+- Page title: `"Nursing RAG Learning Platform"`
+- `<script type="module" src="/src/main.jsx">` — Vite ES module entry
+
+**Detailed Explanation:** Standard Vite SPA scaffold. All content is rendered by React; this file is a static shell.
+
+**Dependencies:** Google Fonts CDN (external, network).
+
+**Interactions:** Root container for `main.jsx` output.
+
+**Complexity Notes:** None — boilerplate.
+
+---
+
+### FILE: `src/main.jsx`
+
+**Purpose:** Application bootstrap. Mounts the React tree into the DOM.
+
+**Key Components:**
+- `ReactDOM.createRoot()` — React 18 concurrent root API
+- `React.StrictMode` — wraps entire app for development double-render checks
+
+**Detailed Explanation:**
+```
+document.getElementById('root')  →  ReactDOM.createRoot  →  renders <App />
+```
+Also imports `index.css` to activate TailwindCSS.
+
+**Dependencies:** `react`, `react-dom`, `./App.jsx`, `./index.css`
+
+**Interactions:** Feeds `App.jsx` into the DOM root.
+
+**Complexity Notes:** None — standard.
+
+---
+
+### FILE: `src/App.jsx`
+
+**Purpose:** Defines all client-side routes for the application.
+
+**Key Components:**
+- `BrowserRouter` — uses HTML5 History API
+- Three `<Route>` definitions:
+  - `/login` → `<Login />`
+  - `/signup` → `<Signup />`
+  - `/workspace` → `<Workspace />`
+
+**Detailed Explanation:**
+No default `/` route is defined. Navigating to `/` results in a blank page — this is a **known gap** discussed further in Security & Risk.
+
+**Dependencies:** `react-router-dom`, `pages/Login`, `pages/Signup`, `pages/Workspace`
+
+**Interactions:** Top-level orchestrator; all pages are children.
+
+**Complexity Notes:** ⚠️ Missing a root `/` route redirect. Login `handleLogin` navigates to `'/'`, which hits a dead route.
+
+---
+
+### FILE: `src/index.css`
+
+**Purpose:** Global stylesheet. Activates TailwindCSS and sets body defaults.
+
+**Key Components:**
+- `@tailwind base/components/utilities` — Tailwind injection directives
+- `@layer base { body { ... } }` — applies `bg-background`, `text-text_primary`, `font-sans`, `antialiased`
+
+**Dependencies:** TailwindCSS (via PostCSS pipeline)
+
+**Interactions:** Imported once in `main.jsx`; affects every component.
+
+**Complexity Notes:** Minimal intentionally — most styling is done per-component via Tailwind classes or local CSS files.
+
+---
+
+### FILE: `src/utils/cn.js`
+
+**Purpose:** Shared helper to safely merge Tailwind class strings without conflicts.
+
+**Key Components:**
+- `cn(...inputs)` — combines `clsx` (conditional classes) with `twMerge` (conflict resolution)
+
+**Detailed Explanation:**
+Example: `cn("p-4", condition && "p-8")` → returns `"p-8"` if condition is true, not `"p-4 p-8"` (which would be a conflict).
+
+**Dependencies:** `clsx`, `tailwind-merge`
+
+**Interactions:** Imported by `Sidebar.jsx` and `MessageBubble.jsx`.
+
+**Complexity Notes:** Industry-standard pattern. No issues.
+
+---
+
+### FILE: `src/pages/Login.jsx`
+
+**Purpose:** Full-screen login page with a two-panel layout.
+
+**Key Components:**
+- `handleLogin(e)` — prevents form default, navigates to `'/'` (broken, see notes)
+- `handleGoogleAuth()` — console.log stub, navigates to `'/'`
+- `features[]` — static array of 4 app feature strings rendered as a checklist
+- Left panel: branding, feature list, illustration placeholder
+- Right panel: email + password form, Google OAuth button, sign-up link
+
+**Detailed Explanation:**
+The left panel uses a dark gradient background (`#102e6e → #111827`) for an enterprise SaaS aesthetic. No actual credentials are validated — both submit and Google buttons simply call `navigate('/')`.
+
+**Dependencies:** `react-router-dom` (useNavigate), `lucide-react` (CheckCircle2), `./Login.css`
+
+**Interactions:** Linked to from `App.jsx` at `/login`. References `/signup` via a plain `<a href="#">` (not a React Router Link — a bug).
+
+**Complexity Notes:**
+- ⚠️ `navigate('/')` — navigates to an undefined route (blank screen)
+- ⚠️ "Sign up" link is `<a href="#">` instead of React Router `<Link to="/signup">` — causes a page reload
+- ⚠️ No form state — `email` and `password` are uncontrolled inputs (values not tracked in state)
+- No real authentication logic
+
+---
+
+### FILE: `src/pages/Login.css`
+
+**Purpose:** Custom CSS for the Login page. Complements Tailwind for layout/theming not covered by utility classes.
+
+**Key Components:**
+- `.login-container` — full viewport flex layout
+- `.login-left-panel` — 50% width dark gradient panel
+- `.login-card` — 260px fixed-width, scaled to 90% (`transform: scale(0.9)`)
+- `.primary-button`, `.secondary-button` — styled action buttons
+- `@media (max-width: 768px)` — stacks panels vertically on mobile
+
+**Complexity Notes:** ⚠️ `.login-card` uses `transform: scale(0.9)` and a hard-coded `260px` max-width which makes the form appear visually small on large screens. Not responsive-adaptive.
+
+---
+
+### FILE: `src/pages/Signup.jsx`
+
+**Purpose:** Full-screen registration page. Structurally mirrors `Login.jsx`.
+
+**Key Components:**
+- `handleSignup(e)` — navigates to `/login` on submit (correct flow)
+- `handleGoogleAuth()` — navigates to `'/'` (same broken route issue)
+- 4-field form: Full Name, Email, Password, Confirm Password
+- Google OAuth button (UI only)
+- `<Link to="/login">` — correctly uses React Router Link for the sign-in link
+
+**Detailed Explanation:**  
+Confirm Password field exists in the UI but there is **no client-side validation** that the two passwords match. Any value passes form submission.
+
+**Dependencies:** `react-router-dom` (useNavigate, Link), `lucide-react` (CheckCircle2), `./Signup.css`
+
+**Interactions:** Routes to `/login` on signup. Linked from `App.jsx` at `/signup`.
+
+**Complexity Notes:**
+- ⚠️ No password match validation
+- ⚠️ All inputs are uncontrolled (no `value` + `onChange`)
+- ⚠️ `handleGoogleAuth` still routes to broken `'/'`
+
+---
+
+### FILE: `src/pages/Signup.css`
+
+**Purpose:** Custom CSS for the Signup page. Nearly identical to `Login.css` with minor differences.
+
+**Key Differences from Login.css:**
+- Right panel background is `#d0e1f3` (blue-tinted) then overridden to `#f8fafc` with a dotted `radial-gradient` pattern
+- Signup card uses **glassmorphism**: `background: rgba(255,255,255,0.6)`, `backdrop-filter: blur(12px)`
+- Card has a visible border `rgba(255,255,255,0.3)` for frosted glass effect
+
+**Complexity Notes:** CSS has a **duplicate `.signup-right-panel` block** (lines 103-111 and 128-133) — the second overrides the first. This is redundant but not breaking.
+
+---
+
+### FILE: `src/pages/Workspace.jsx`
+
+**Purpose:** The main application shell after login. Orchestrates layout and view switching.
+
+**Key Components:**
+- `activeView` state (`'dashboard'` | `'chat'`)
+- `handleNewLesson()` — switches view to `'chat'`
+- `handleOpenProject(projectId)` — switches view to `'chat'`
+- `handleOpenConcept(conceptStr)` — switches view to `'chat'`
+- Renders: `<Sidebar>` + `<TopBar>` + conditional `<DashboardArea>` or `<ChatArea>`
+
+**Detailed Explanation:**
+Uses a simple boolean-like state toggle between two views. There is **no routing** within the workspace — view changes are in-memory state only, meaning back/forward browser navigation does not work inside the workspace.
+
+**Dependencies:** React (useState), `Sidebar`, `TopBar`, `ChatArea`, `DashboardArea`
+
+**Interactions:** Central hub — composes all major UI regions. Passes callbacks to `DashboardArea`.
+
+**Complexity Notes:**
+- ⚠️ No URL-based routing for workspace sub-views
+- ⚠️ `handleNewLesson`/`handleOpenProject`/`handleOpenConcept` only switch views; they do not pass any selected context (project ID, concept name) to `ChatArea`
+
+---
+
+### FILE: `src/components/layout/Sidebar.jsx`
+
+**Purpose:** Persistent left navigation panel providing project browsing and chat history search.
+
+**Key Components:**
+- `projectsOpen` state — collapsible projects section
+- `searchQuery` state — live-filters `recentChats` list
+- `projects[]` — 3 hardcoded items (Pharmacology, Anatomy, Patient Assessment)
+- `recentChats[]` — 3 hardcoded items
+- `filteredChats` — derived from `searchQuery` filter
+
+**Detailed Explanation:**
+- Logo section with `BookOpen` icon and brand name
+- "New Chat" button (no handler — fires no action)
+- Projects section: collapsible, each item shows hover-revealed count badge and a `MoreHorizontal` options button (no action attached)
+- Recent Chats: live-filtered search input → filtered list of chat items
+- Bottom: Settings & Profile button (no action)
+
+**Dependencies:** React (useState), `lucide-react` (7 icons), `../../utils/cn`
+
+**Interactions:** Rendered by `Workspace.jsx`. Does NOT accept or emit any props — fully self-contained with mock data.
+
+**Complexity Notes:**
+- ⚠️ All data is hardcoded static mock data — no props, no API
+- ⚠️ "New Chat", project items, and Settings buttons have no onClick handlers
+- The `cn` utility is imported but only used for one className (could be a plain string)
+
+---
+
+### FILE: `src/components/layout/TopBar.jsx`
+
+**Purpose:** Top header bar visible within the workspace.
+
+**Key Components:**
+- Active Project label (hardcoded "Pharmacology Basics")
+- Global search input (uncontrolled, no handler)
+- Bell notification button with red dot badge (hardcoded; no notifications)
+- User avatar + name "Sarah Connor" (hardcoded placeholder)
+- `ChevronDown` dropdown arrow (no dropdown attached)
+
+**Dependencies:** React, `lucide-react` (User, Bell, ChevronDown, Search)
+
+**Interactions:** Rendered by `Workspace.jsx`. Accepts no props.
+
+**Complexity Notes:**
+- ⚠️ Entirely static — all content is hardcoded (project name, username, notification badge)
+- ⚠️ Mobile search icon visible at `md:hidden`; desktop search at `hidden md:block` — correct responsive pattern
+
+---
+
+### FILE: `src/components/chat/ChatArea.jsx`
+
+**Purpose:** The main AI chat interface. Manages message history and simulates AI responses.
+
+**Key Components:**
+- `messages[]` state — array of `{id, role, content, timestamp}` objects; pre-seeded with 3 demo messages
+- `isTyping` state — controls the animated typing indicator
+- `messagesEndRef` — `useRef` for auto-scroll
+- `scrollToBottom()` — smooth-scrolls via `useEffect` when `messages` or `isTyping` changes
+- `handleSendMessage(text)` — adds user message, shows typing indicator, then after 1500ms appends a simulated AI response
+- Typing indicator — animated bouncing dots (CSS `animate-bounce` / `animate-pulse`)
+- Shows `<SuggestedPrompts>` when message count ≤ 3 and not typing
+- Shows `<ChatInput>` always
+- Disclaimer text: "Assistant can make mistakes. Consider verifying important clinical information."
+
+**Dependencies:** React (useState, useEffect, useRef), `MessageBubble`, `SuggestedPrompts`, `ChatInput`
+
+**Interactions:** Rendered by `Workspace.jsx`. Passes `handleSendMessage` to `ChatInput` and `SuggestedPrompts`.
+
+**Complexity Notes:**
+- ✅ Well-structured chat UI pattern
+- ⚠️ AI response is a hardcoded `setTimeout` stub — no HTTP call to any RAG backend
+- ⚠️ Message IDs use `Date.now()` and `Date.now() + 1` — could theoretically collide if called rapidly
+- ⚠️ No error handling for failed API calls (because no API calls exist yet)
+- The `messages.length <= 3` condition hides suggested prompts after the 3rd reply — clever but may hide prompts unintentionally after a single extra message
+
+---
+
+### FILE: `src/components/chat/ChatInput.jsx`
+
+**Purpose:** The text input area at the bottom of the chat view.
+
+**Key Components:**
+- `text` state — controlled textarea value
+- `handleSubmit(e)` — validates non-empty, calls `onSend(text.trim())`, clears input
+- `handleKeyDown(e)` — submits on Enter, allows Shift+Enter for newlines
+- `Paperclip` button — "Attach file (future)" — no handler
+- `Mic` button — "Voice input (future)" — no handler
+- Submit `<button>` — disabled and grayed when `text` is empty
+
+**Dependencies:** React (useState), `lucide-react` (Send, Paperclip, Mic)
+
+**Props:** `onSend` (function)
+
+**Interactions:** Called by `ChatArea.jsx`. Invokes `onSend` on valid submission.
+
+**Complexity Notes:**
+- ✅ Correct controlled input pattern
+- ✅ Keyboard UX (Shift+Enter) correctly handled
+- ⚠️ `textarea` does not auto-resize height (has `min-h-[56px]` and `max-h-48` but no JS-driven resize)
+
+---
+
+### FILE: `src/components/chat/MessageBubble.jsx`
+
+**Purpose:** Renders a single chat message (user or assistant).
+
+**Key Components:**
+- `isUser` — derived from `message.role === 'user'`
+- User bubble: right-aligned, indigo avatar (`User` icon), gray-100 background
+- AI bubble: left-aligned, primary-green avatar (`Sparkles` icon), transparent background with no border/shadow
+- `whitespace-pre-wrap` — preserves newlines in message text
+
+**Dependencies:** React, `lucide-react` (User, Sparkles), `../../utils/cn`
+
+**Props:** `message: { id, role, content, timestamp }`
+
+**Interactions:** Rendered by `ChatArea.jsx` for each message in the array.
+
+**Complexity Notes:**
+- ✅ Clean, readable implementation
+- ⚠️ No markdown rendering — content is displayed as raw text with `whitespace-pre-wrap`. Bold, bullet lists, code blocks from AI would appear as plain text with asterisks/hashes
+- `timestamp` prop is accepted but never displayed
+
+---
+
+### FILE: `src/components/chat/SuggestedPrompts.jsx`
+
+**Purpose:** Displays 4 clickable quick-start prompt cards before the user has sent many messages.
+
+**Key Components:**
+- `prompts[]` — 4 hardcoded nursing-specific prompt strings
+- 2-column responsive grid of `<button>` elements
+- Each button calls `onSelectPrompt(prompt)` on click
+
+**Dependencies:** React, `lucide-react` (Sparkles)
+
+**Props:** `onSelectPrompt` (function)
+
+**Interactions:** Rendered conditionally by `ChatArea.jsx`. Passes selected prompt text up to `handleSendMessage`.
+
+**Complexity Notes:** Simple and clean. Prompts are hardcoded — cannot be personalized or dynamically loaded.
+
+---
+
+### FILE: `src/components/dashboard/DashboardArea.jsx`
+
+**Purpose:** The landing home screen within the workspace (shown before starting a chat).
+
+**Key Components:**
+- `projects[]` — 3 hardcoded learning project items with icons and colors
+- `concepts[]` — 4 hardcoded recently opened concept strings
+- `tags[]` — 5 hardcoded AI suggested topic tag strings
+- Welcome header with student greeting
+- Action Row: "Start New Lesson" (calls `onNewLesson`) + "Explore Concepts" (console.log stub)
+- Project card grid (3-up, 2-up on tablet, 1-up on mobile)
+- Horizontally scrollable concept cards
+- Tag pill cloud
+
+**Dependencies:** React, `lucide-react` (Book, Heart, Pill), `./DashboardArea.css`
+
+**Props:** `onNewLesson`, `onOpenProject`, `onOpenConcept` (all functions from Workspace)
+
+**Interactions:** Rendered by `Workspace.jsx`. Callbacks propagate user intent to the workspace view controller.
+
+**Complexity Notes:**
+- ⚠️ All data (projects, concepts, tags) is hardcoded static mock data
+- ⚠️ "Explore Concepts" btn only calls `console.log`
+- ⚠️ Tag clicks only call `console.log` — no navigation or filtering
+
+---
+
+### FILE: `src/components/dashboard/DashboardArea.css`
+
+**Purpose:** Scoped CSS for the DashboardArea component, handling grid layout, card styles, and responsive breakpoints.
+
+**Key Components:**
+- `.dashboard-container` — vertical flex with `overflow-y: auto`
+- `.dashboard-card-grid` — 3-column CSS Grid, responsive down to 1 col
+- `.dashboard-project-card:hover` — lift animation (`translateY(-2px)` + shadow)
+- `.dashboard-horizontal-scroll` — hidden scrollbar for concept cards
+- `.dashboard-tag` — pill shape (`border-radius: 9999px`) with blue tint
+- `@media (max-width: 1024px)` — 2 columns
+- `@media (max-width: 768px)` — 1 column, reduced padding
+
+**Complexity Notes:** Well-organized. Uses `lch()` color function on line 82 for one text color — modern CSS but may have minor compatibility issues on older browsers.
+
+---
+
+### FILE: `vite.config.js`
+
+**Purpose:** Vite bundler configuration.
+
+**Key Components:**
+- `@vitejs/plugin-react` — enables JSX transform and React Fast Refresh in dev
+
+**Complexity Notes:** Minimal. No custom aliases, proxies, or environment overrides defined.
+
+---
+
+### FILE: `tailwind.config.js`
+
+**Purpose:** TailwindCSS theme customization.
+
+**Key Components:**
+- Content paths: `./index.html`, `./src/**/*.{js,ts,jsx,tsx}`
+- Custom color tokens: `primary (#10A37F)`, `secondary (#0F172A)`, `background (#F7F9FB)`, `surface (#FFFFFF)`, `accent (#2563EB)`, `danger (#EF4444)`, `text_primary (#111827)`, `text_secondary (#6B7280)`
+- Font family: `Inter` → `sans`
+
+**Complexity Notes:** Clean design token system. Note that `primary` (#10A37F green) in Tailwind config vs. the Dashboard button color (`#2563EB` blue) — the Dashboard CSS directly hardcodes blue, bypassing the `accent` token. Inconsistency in design system usage.
+
+---
+
+### FILE: `postcss.config.js`
+
+**Purpose:** PostCSS pipeline — runs Tailwind and Autoprefixer on CSS.
+
+**Complexity Notes:** Standard, no customization.
+
+---
+
+### FILE: `package.json`
+
+**Purpose:** Project metadata, npm scripts, and dependency manifest.
+
+**Scripts:** `dev`, `build`, `lint`, `preview`
+
+**Complexity Notes:** Standard Vite React scaffold. No unusual scripts or overrides.
+
+---
+
+## 5. MODULE DEPENDENCY FLOW
+
+```
+index.html
+  └── src/main.jsx
+        ├── src/index.css  (TailwindCSS globals)
+        └── src/App.jsx
+              ├── react-router-dom (BrowserRouter, Routes, Route)
+              ├── pages/Login.jsx
+              │     ├── react-router-dom (useNavigate)
+              │     ├── lucide-react (CheckCircle2)
+              │     └── pages/Login.css
+              ├── pages/Signup.jsx
+              │     ├── react-router-dom (useNavigate, Link)
+              │     ├── lucide-react (CheckCircle2)
+              │     └── pages/Signup.css
+              └── pages/Workspace.jsx
+                    ├── components/layout/Sidebar.jsx
+                    │     ├── lucide-react (7 icons)
+                    │     └── utils/cn.js
+                    │           ├── clsx
+                    │           └── tailwind-merge
+                    ├── components/layout/TopBar.jsx
+                    │     └── lucide-react (User, Bell, ChevronDown, Search)
+                    ├── components/chat/ChatArea.jsx
+                    │     ├── components/chat/MessageBubble.jsx
+                    │     │     ├── lucide-react (User, Sparkles)
+                    │     │     └── utils/cn.js
+                    │     ├── components/chat/SuggestedPrompts.jsx
+                    │     │     └── lucide-react (Sparkles)
+                    │     └── components/chat/ChatInput.jsx
+                    │           └── lucide-react (Send, Paperclip, Mic)
+                    └── components/dashboard/DashboardArea.jsx
+                          ├── lucide-react (Book, Heart, Pill)
+                          └── components/dashboard/DashboardArea.css
+```
+
+---
+
+## 6. EXECUTION FLOW
+
+### Application Boot
+```
+Browser loads index.html
+  → Vite serves /src/main.jsx
+  → ReactDOM.createRoot mounts <App /> under <React.StrictMode>
+  → BrowserRouter reads current URL
+  → Routes match URL to Login / Signup / Workspace
+```
+
+### Login Flow (Current — Mocked)
+```
+User visits /login
+  → Login.jsx renders two-panel layout
+  → User fills email + password (uncontrolled)
+  → Submits form
+  → handleLogin() called → navigate('/') → BLANK PAGE (bug)
+```
+
+### Signup Flow
+```
+User visits /signup
+  → Signup.jsx renders registration form
+  → User fills all fields (uncontrolled, no validation)
+  → Submits form
+  → handleSignup() → navigate('/login') ← correct
+```
+
+### Main Workspace Flow
+```
+User visits /workspace
+  → Workspace.jsx renders
+  → Sidebar + TopBar always visible
+  → activeView === 'dashboard' → DashboardArea shown by default
+      → User clicks "Start New Lesson"
+          → handleNewLesson() → setActiveView('chat')
+          → ChatArea replaces DashboardArea
+              → Pre-seeded messages rendered via MessageBubble
+              → SuggestedPrompts shown (messages ≤ 3)
+              → User types in ChatInput → Enter / Send button
+                  → handleSendMessage(text) called
+                  → User message appended to messages[]
+                  → isTyping = true → typing indicator shown
+                  → setTimeout 1500ms
+                  → Simulated AI response appended
+                  → isTyping = false
+                  → messagesEndRef scrolls into view
+```
+
+---
+
+## 7. CONFIGURATION ANALYSIS
+
+| Item | Detail |
+|---|---|
+| **Config files** | `vite.config.js`, `tailwind.config.js`, `postcss.config.js`, `package.json` |
+| **Environment variables** | **None** — no `.env` files, no `import.meta.env` usage |
+| **API keys** | **None present** — no keys, tokens, or secrets in codebase |
+| **Database connections** | **None** — purely a frontend prototype |
+| **Backend API URL** | **None configured** — no `fetch`, `axios`, or HTTP client found anywhere |
+| **Auth tokens** | **None** — no JWT, session, or cookie handling |
+| **Build output** | `dist/` directory (present, committed to repo — see note below) |
+
+> [!NOTE]
+> The `dist/` folder is committed to the repository. This is unusual — production build artifacts are typically ignored via `.gitignore`. The `.gitignore` file is very minimal (14 bytes) and likely only ignores `node_modules`.
+
+---
+
+## 8. SECURITY OBSERVATIONS
+
+| Severity | Issue | Location | Detail |
+|---|---|---|---|
+| 🟡 Medium | **No authentication guard** | `App.jsx` | `/workspace` route is publicly accessible without any session check. Anyone can navigate to `/workspace` directly. |
+| 🟡 Medium | **No input validation** | `Login.jsx`, `Signup.jsx` | Form inputs are **uncontrolled** — no state tracking, no sanitization, no client-side validation beyond HTML `required`. |
+| 🟡 Medium | **Broken post-login redirect** | `Login.jsx` | `navigate('/')` routes to an undefined path. Real users would land on a blank page post-login. |
+| 🟡 Medium | **No password confirmation validation** | `Signup.jsx` | Confirm Password field is purely cosmetic — password mismatch is never checked. |
+| 🟡 Medium | **Dist folder committed** | `dist/` | Built production assets are committed. Minor — exposes bundle internals in repo history. |
+| 🟢 Low | **No secrets/API keys** | All files | ✅ No credentials, API keys, or tokens are exposed anywhere in the codebase. |
+| 🟢 Low | **Google Auth stubs** | `Login.jsx`, `Signup.jsx` | Google OAuth buttons have no real OAuth flow — they just call `console.log`. No risk currently, but must be implemented securely before production. |
+| 🟢 Low | **No CORS or backend surface** | N/A | Since there are no HTTP calls, there is no CORS exposure or server-side attack surface in this frontend. |
+| 🟢 Low | **Console.log usage** | Multiple files | `console.log` statements are present in handlers. These leak interaction intent in production browser devtools but are not a critical risk. |
+| 🟢 Low | **XSS risk (future)** | `MessageBubble.jsx` | AI responses are rendered as plain text via `whitespace-pre-wrap`, not `dangerouslySetInnerHTML`. ✅ No XSS risk currently. If markdown rendering (HTML injection) is added later, this must be sanitized. |
+
+---
+
+## 9. ARCHITECTURE SUMMARY
+
+### Pattern
+**Component-Based Single Page Application (SPA)** with client-side routing. The architecture is a clean React composition tree with a flat component hierarchy and no global state management.
+
+### Data Flow
+```
+Static Mock Data (hardcoded arrays)
+  → Passed as JSX props or used directly in components
+  → Rendered in browser
+
+User Interaction (click, type, submit)
+  → React state updates (useState)
+  → Re-render of affected component subtree
+  → UI reflects new state
+
+"AI" Response (simulated)
+  → setTimeout(1500ms) in ChatArea
+  → Hardcoded string appended to messages[]
+  → No real backend call
+```
+
+### Architecture Diagram
+```
+┌─────────────────────────────────────────────────────┐
+│                   Browser (SPA)                     │
+│                                                     │
+│  /login ──► Login.jsx (two-panel auth UI)           │
+│  /signup ──► Signup.jsx (four-field registration)   │
+│  /workspace ──► Workspace.jsx                       │
+│                  ├── Sidebar (nav + search)         │
+│                  ├── TopBar (header chrome)         │
+│                  └── [activeView]                   │
+│                       ├── DashboardArea (home)      │
+│                       └── ChatArea (AI chat)        │
+│                            ├── MessageBubble        │
+│                            ├── SuggestedPrompts     │
+│                            └── ChatInput            │
+└─────────────────────────────────────────────────────┘
+           ↕ (planned, not yet implemented)
+┌─────────────────────────────────────────────────────┐
+│              RAG Backend (external)                  │
+│  - Document retrieval (Nursing syllabus corpus)     │
+│  - LLM inference (GPT / open-source)               │
+│  - Auth service (JWT / OAuth)                       │
+└─────────────────────────────────────────────────────┘
+```
+
+### Scalability Assessment
+
+| Dimension | Current State | Assessment |
+|---|---|---|
+| **State Management** | `useState` only | ✅ Fine for current scale; will need Context or Zustand/Redux when API state grows |
+| **Routing** | React Router with 3 routes | ✅ Extensible — easy to add nested workspace routes |
+| **API Layer** | None | ❌ Needs a service layer (e.g., `src/services/api.js`) before any backend integration |
+| **Auth** | None | ❌ Needs protected routes and session/token management |
+| **Component Reuse** | Moderate | ⚠️ Login and Signup share duplicate CSS and near-identical JSX — could be extracted into a shared `AuthPage` component |
+| **Design System** | Tailwind tokens + local CSS | ⚠️ Inconsistency — some components use Tailwind tokens, others hardcode hex values in CSS |
+| **Testing** | None | ❌ No unit, integration, or E2E tests exist |
+
+### Summary Verdict
+This is a **well-structured, visually polished frontend prototype** that demonstrates the full UI shell of a nursing RAG learning platform. The component boundaries are logical, the design quality is high, and the chat UX is well-thought-out. However, it is **100% a demo** — all data is mocked, authentication is non-functional, no backend integration exists, and there are several routing/validation bugs that would need to be resolved before any real deployment.
