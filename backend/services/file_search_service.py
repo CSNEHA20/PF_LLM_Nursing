@@ -67,11 +67,9 @@ def search_documents(question: str, store_name: str = None) -> str:
     contents = [types.Content(role="user", parts=parts)]
 
     system_instruction = (
-        "You are a Nursing AI Assistant. "
-        "Answer ONLY from the uploaded nursing documents provided. "
-        "If the answer is not found in the documents, respond with: "
-        "'Answer not available in uploaded documents.' "
-        "Do NOT hallucinate or use external knowledge."
+        "You are an AI assistant for a Nursing Learning platform. "
+        "Answer ONLY from provided documents. "
+        "Do not hallucinate."
     )
 
     try:

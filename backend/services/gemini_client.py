@@ -18,7 +18,7 @@ def get_gemini_client():
     return client
 
 
-def upload_document(file_path: str) -> str:
+def upload_document(file_path: str, store_name: str = None) -> str:
     """
     Uploads a document to the Gemini Files API and persists the file ID
     into the currently ACTIVE store automatically.
@@ -44,8 +44,8 @@ def upload_document(file_path: str) -> str:
         print(f"DEBUG: File uploaded to Gemini: {file_id}")
         print(f"DEBUG: MIME type: {mime_type}")
 
-        # Persist file_id + mime_type into the active store (auto-resolved)
-        add_file(file_id, mime_type)
+        # Persist file_id + mime_type into the store (falls back to active store if store_name is None)
+        add_file(file_id, mime_type, store_name=store_name)
 
         return file_id
 

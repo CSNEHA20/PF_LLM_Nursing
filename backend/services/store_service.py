@@ -5,6 +5,9 @@ from datetime import datetime
 # Run from backend/ directory — path is relative to that working directory
 STORE_PATH = Path("data/document_store.json")
 
+# The permanent default store — always exists, always the fallback active store
+DEFAULT_STORE = "Nursing_llm_store"
+
 
 # ─────────────────────────────────────────────────────────────
 # Low-level persistence helpers
@@ -26,8 +29,10 @@ def load_store() -> dict:
     Legacy flat format (previous schema) is migrated automatically.
     """
     if not STORE_PATH.exists():
-        print("DEBUG STORE: file not found, starting fresh")
-        return {"active_store": None, "stores": {}}
+        print("DEBUG STORE: file not found, initialising with default store")
+        default_data = {"active_store": DEFAULT_STORE, "stores": {DEFAULT_STORE: []}}
+        save_store(default_data)
+        return default_data
 
     with open(STORE_PATH, "r") as f:
         data = json.load(f)
@@ -54,6 +59,18 @@ def load_store() -> dict:
         }
         save_store(data)
         print(f"DEBUG STORE: migration complete — active_store={first_store}")
+
+    # ── Guarantee default store bucket always exists ──────────
+    if DEFAULT_STORE not in data["stores"]:
+        print(f"DEBUG STORE: creating missing default bucket '{DEFAULT_STORE}'")
+        data["stores"][DEFAULT_STORE] = []
+        save_store(data)
+
+    # ── Guarantee active_store is set and valid ───────────────
+    if not data.get("active_store") or data["active_store"] not in data["stores"]:
+        print(f"DEBUG STORE: active_store was missing/invalid — resetting to '{DEFAULT_STORE}'")
+        data["active_store"] = DEFAULT_STORE
+        save_store(data)
 
     return data
 
@@ -88,15 +105,10 @@ def create_new_store() -> str:
 def get_active_store() -> str:
     """
     Returns the name of the currently active store.
-    If no active store exists yet, one is created automatically.
+    Falls back to DEFAULT_STORE ('Nursing_llm_store') if nothing is set.
     """
-    data = load_store()
-
-    active = data.get("active_store")
-    if not active or active not in data.get("stores", {}):
-        print("DEBUG STORE: no active store found, creating one")
-        return create_new_store()
-
+    data = load_store()  # load_store() already self-heals active_store
+    active = data.get("active_store", DEFAULT_STORE)
     print(f"DEBUG STORE: active_store={active}")
     return active
 
@@ -117,30 +129,32 @@ def set_active_store(store_name: str):
 # File management
 # ─────────────────────────────────────────────────────────────
 
-def add_file(file_id: str, mime_type: str = "application/pdf"):
+def add_file(file_id: str, mime_type: str = "application/pdf", store_name: str = None):
     """
-    Append a file entry to the ACTIVE store bucket.
+    Append a file entry to a store bucket.
+    - If store_name is provided → adds to that specific store.
+    - If store_name is None    → adds to the currently ACTIVE store.
     Skips duplicates based on file_id.
-    The active store is created automatically if none exists.
     """
     data = load_store()
-    store_name = get_active_store()
+    target_store = store_name or data.get("active_store", DEFAULT_STORE)
 
     # Ensure bucket exists (edge-case safety)
-    if store_name not in data["stores"]:
-        data["stores"][store_name] = []
+    if target_store not in data["stores"]:
+        print(f"DEBUG STORE: bucket '{target_store}' not found, creating it")
+        data["stores"][target_store] = []
 
     # Check for duplicate
     existing_ids = [
         e["file_id"] if isinstance(e, dict) else e
-        for e in data["stores"][store_name]
+        for e in data["stores"][target_store]
     ]
 
     if file_id not in existing_ids:
-        data["stores"][store_name].append({"file_id": file_id, "mime_type": mime_type})
-        print(f"DEBUG STORE: added '{file_id}' ({mime_type}) → store '{store_name}'")
+        data["stores"][target_store].append({"file_id": file_id, "mime_type": mime_type})
+        print(f"DEBUG STORE: added '{file_id}' ({mime_type}) → store '{target_store}'")
     else:
-        print(f"DEBUG STORE: '{file_id}' already in '{store_name}', skipping")
+        print(f"DEBUG STORE: '{file_id}' already in '{target_store}', skipping")
 
     save_store(data)
 
@@ -187,3 +201,6 @@ def list_all_stores() -> dict:
     data = load_store()
     print(f"DEBUG STORE: list_all_stores() — {len(data.get('stores', {}))} store(s)")
     return data
+
+# Alias for backward compatibility and user-defined plan steps
+get_store_data = list_all_stores

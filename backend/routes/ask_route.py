@@ -37,11 +37,13 @@ async def ask_question(request: AskRequest):
 # ── Upload endpoint ───────────────────────────────────────────────────────────
 
 @router.post("/upload-document")
-async def upload_document_endpoint(file: UploadFile = File(...)):
+async def upload_document_endpoint(
+    file: UploadFile = File(...),
+    store_name: Optional[str] = None
+):
     """
     Upload a PDF or TXT document to the Gemini Files API.
-    The file is automatically added to the currently ACTIVE store.
-    No store_name parameter is required.
+    The file is added to the specified store, or the currently ACTIVE store if omitted.
     """
     print(f"DEBUG UPLOAD FILE NAME: {file.filename}")
 
@@ -54,21 +56,23 @@ async def upload_document_endpoint(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
 
     try:
-        # Upload to Gemini — active store is resolved automatically inside upload_document
-        file_id = upload_document(file_path)
+        # Upload to Gemini — store_name can be None to use active store
+        file_id = upload_document(file_path, store_name=store_name)
 
         print(f"DEBUG FILE ID: {file_id}")
+        print(f"DEBUG TARGET STORE: {store_name or '(active)'}")
 
         # Clean up temp file after successful Gemini upload
         if os.path.exists(file_path):
             os.remove(file_path)
 
-        active_store = get_active_store()
+        # Use the provided store_name or resolve what the actual active/default store is
+        used_store = store_name or get_active_store()
 
         return {
             "message": "Document uploaded successfully",
             "file_id": file_id,
-            "store": active_store,
+            "store": used_store,
         }
 
     except Exception as e:

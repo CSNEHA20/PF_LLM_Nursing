@@ -13,16 +13,17 @@ router = APIRouter()
 # ── Store overview ────────────────────────────────────────────────────────────
 
 @router.get("/stores")
-def get_stores():
+def list_stores():
     """
     Returns the full store state:
     - active_store: the currently active store name
     - stores: all store buckets with their document lists
     """
     data = list_all_stores()
-    print(f"DEBUG: GET /stores → active={data.get('active_store')}, "
-          f"total stores={len(data.get('stores', {}))}")
-    return data
+    return {
+        "active_store": data.get("active_store"),
+        "stores": data.get("stores")
+    }
 
 
 # ── Create new store ──────────────────────────────────────────────────────────
